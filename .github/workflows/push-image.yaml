@@ -3,7 +3,7 @@ name: Publish Docker image
 on:
   push:
     branches:
-      - master
+      - add-tests
 
 jobs:
   push_to_registry:
@@ -58,3 +58,10 @@ jobs:
           SLACK_TITLE: Result of pushing docker image
           SLACK_USERNAME: rtCamp
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Run simple-app
+        uses: docker://ghcr.io/julie717/simple-app:master
+      - name: Deploy on github pages              # Use a third-party plugin to upload the content
+        uses: JamesIves/github-pages-deploy-action@4.1.0
+        with:
+          folder: build
