@@ -10,3 +10,6 @@ WORKDIR $APP_HOME
 COPY --from=temp $APP_HOME .     
 EXPOSE 8080
 ENTRYPOINT ["sh", "-c", "java -jar $APP_HOME/build/libs/$JAR_NAME"]
+
+RUN useradd -ms /bin/bash user
+USER user
