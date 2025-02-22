@@ -1,0 +1,61 @@
+pipeline {
+    agent { label 'Node_02' }
+    environment {
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub_credentials')
+    }
+    options {
+        buildDiscarder(logRotator(numToKeepStr:'5'))
+    }
+    stages {
+        stage('Clone repository') {
+            steps {
+                git url: 'https://github.com/Julie717/simple-app', branch: 'master'
+            }
+        }
+        stage('Validate Dockerfile'){
+            steps {
+                sh """
+                docker pull hadolint/hadolint:latest-alpine
+                docker run --rm -i hadolint/hadolint < Dockerfile
+                """
+            }
+        }
+        stage('Build image') {
+            steps {
+                sh "docker build -t $DOCKERHUB_CREDENTIALS_USR/simple-app:$BUILD_NUMBER ."
+            }
+        }
+        stage('Test image') {
+            steps {
+                sh """
+                docker run -d -p 8080:8080 --name simple-app $DOCKERHUB_CREDENTIALS_USR/simple-app:$BUILD_NUMBER
+                sleep 30s
+                curl http://localhost:8080/hello
+                docker stop simple-app
+                docker container rm simple-app
+                """
+            }
+        }
+        stage('Login to Docker Hub') {
+            steps {
+                sh """
+	            echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+                echo 'Login Completed'
+                """
+            }
+        }
+        stage('Push Image to Docker Hub') {
+            steps {
+                sh """
+	            docker push $DOCKERHUB_CREDENTIALS_USR/simple-app:$BUILD_NUMBER
+	            echo 'Push Image Completed'
+	            """
+	        }
+        }
+    }
+    post {
+         always {
+             sh 'docker logout'
+         }
+    }
+}
