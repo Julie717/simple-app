@@ -52,6 +52,64 @@ pipeline {
 	            """
 	        }
         }
+        stage('Deployment to pre-prod') {
+            steps {
+                timeout(time: 15, unit: "MINUTES") {
+        	        input message: 'Do you want to approve the deployment?', ok: 'Yes'
+        	    }
+        	    script {
+                    env.NAMESPACE="pre-prod"
+                    env.APP_IMAGE="${DOCKERHUB_CREDENTIALS_USR}/simple-app:${BUILD_NUMBER}"
+                    env.APP_HOST="simple-app.${NAMESPACE}.k8s-3.sa"
+                }
+                sh """
+                envsubst < deployment.yaml | kubectl apply -f - -n $NAMESPACE
+                """
+        	}
+        }
+        stage('Test pre-prod') {
+            steps {
+                sh """
+                sleep 30s
+                curl $APP_HOST/hello
+                """
+            }
+        }
+        stage('Deployment to prod') {
+            steps {
+                timeout(time: 15, unit: "MINUTES") {
+        	        input message: 'Do you want to approve the deployment?', ok: 'Yes'
+        	    }
+        	    script {
+                    env.NAMESPACE="prod"
+                    env.APP_IMAGE="${DOCKERHUB_CREDENTIALS_USR}/simple-app:${BUILD_NUMBER}"
+                    env.APP_HOST="simple-app.${NAMESPACE}.k8s-3.sa"
+                }
+                sh """
+                envsubst < deployment.yaml | kubectl apply -f - -n $NAMESPACE
+                """
+        	}
+        }
+        stage('Test prod') {
+            steps {
+                sh """
+                sleep 30s
+                curl $APP_HOST/hello
+                """
+            }
+        }
+       stage('Cleaning pre-prod') {
+            steps {
+        	    script {
+                    env.NAMESPACE="pre-prod"
+                }
+                sh """
+                kubectl delete --all deployments -n $NAMESPACE
+                kubectl delete --all ingresses -n $NAMESPACE
+                kubectl delete --all services -n $NAMESPACE
+                """
+        	}
+        }
     }
     post {
          always {
