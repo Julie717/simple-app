@@ -113,7 +113,13 @@ pipeline {
     }
     post {
          always {
-             sh 'docker logout'
+            sh 'docker logout'
+         }
+         success {
+            slackSend (channel: 'app', color: '#00FF00', message: "SUCCESSFUL: Job '${JOB_NAME} [${BUILD_NUMBER}]' (${BUILD_URL})")
+            }
+         failure {
+            slackSend (channel: 'app', color: '#FF0000', message: "FAILED: Job '${JOB_NAME} [${BUILD_NUMBER}]' (${BUILD_URL})")
          }
     }
 }
